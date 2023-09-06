@@ -1,0 +1,27 @@
+#!/bin/bash
+#update system
+dnf update
+#install apache
+dnf install httpd httpd-tools -y
+systemctl enable httpd
+systemctl start httpd
+#update firewall
+firewall-cmd --permanent --zone=public --add-service=http
+firewall-cmd --permanent --zone=public --add-service=https
+firewall-cmd --reload
+#install mariadb
+dnf install mariadb-server mariadb -y
+systemctl start mariadb
+systemctl enable mariadb
+systemctl status mariadb
+mysql_secure_installation
+# Install PHP 7 on CentOS 8
+dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+#dnf install dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+#dnf module list php
+dnf install php php-opcache php-gd php-curl php-mysqlnd -y
+systemctl start php-fpm
+systemctl enable php-fpm
+systemctl status php-fpm
+setsebool -P httpd_execmem 1
+systemctl restart httpd
