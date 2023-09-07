@@ -81,5 +81,27 @@ sudo systemctl reload httpd
 # Ejecuta Certbot para obtener y configurar el certificado SSL
 sudo certbot --apache -d $domain_name -m $email --agree-tos --no-eff-email -n
 
+# Solicita al usuario la información de la base de datos
+read -p "Ingrese el nombre de la base de datos: " db_name
+read -p "Ingrese el nombre de usuario de la base de datos: " db_user
+read -s -p "Ingrese la contraseña de la base de datos: " db_password
+
+# Instala MariaDB y asegura la instalación
+sudo yum install mariadb-server -y
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
+
+# Crea la base de datos y el usuario de MariaDB
+sudo mysql -e "CREATE DATABASE $db_name;"
+sudo mysql -e "CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_password';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'localhost';"
+sudo mysql -e "FLUSH PRIVILEGES;"
+
+# Instala PHP y módulos comunes
+sudo dnf install php php-common php-mysqlnd php-gd php-xml php-mbstring -y
+
+
+
+
 echo "El servidor LAMP con el VirtualHost para $domain_name y SSL habilitado se ha instalado correctamente. Puede acceder a su sitio web en https://$domain_name"
 exit 0
