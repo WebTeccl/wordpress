@@ -1,11 +1,29 @@
 #!/bin/bash
+# Antes de ejecutar este script, asegúrate de editar las siguientes variables de configuración:
 # Variables de configuración
-domain_name="testlamp.ddns.net"
-db_name="db2"
-db_user="user2"
-db_password="password2"
+domain_name="your_domain.com"
+db_name="your_database"
+db_user="your_db_user"
+db_password="your_db_password"
 php_timezone="America/New_York"  # Ajusta la zona horaria de PHP
-email="asdcasdcl@ascasacd.com"    # Tu dirección de correo electrónico
+email="your_email@example.com"    # Tu dirección de correo electrónico
+
+# Pregunta al usuario si los parámetros son correctos
+echo "Recuerda editar este script antes de ejecutarlo, verifica los siguientes parámetros de configuración:"
+echo "Dominio: $domain_name"
+echo "Nombre de la base de datos: $db_name"
+echo "Usuario de la base de datos: $db_user"
+echo "Contraseña de la base de datos: $db_password"
+echo "Zona horaria de PHP: $php_timezone"
+echo "Correo electrónico: $email"
+
+read -p "¿Son correctos? (Sí/No): " answer
+
+if [[ $answer =~ ^[Ss][Ii]$ ]]; then
+    # Los parámetros son correctos, continúa con el script
+    echo "Continuando con la ejecución del script..."
+
+
 
 # Verifica si el dominio ya existe en la configuración de Apache
 if [ -f "/etc/httpd/conf.d/$domain_name.conf" ]; then
@@ -165,3 +183,12 @@ sudo systemctl restart httpd
 
 echo "El servidor LAMP con el VirtualHost para $domain_name y SSL habilitado se ha instalado correctamente. Puede acceder a su sitio web en https://$domain_name"
 exit 0
+
+
+
+else
+    # Los parámetros no son correctos, muestra un mensaje de error y sale del script
+    echo "Por favor, edita los parámetros de configuración antes de ejecutar el script."
+    exit 1
+fi
+
