@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# Solicita al usuario el nombre de dominio
-read -p "Ingrese el nombre de dominio para su sitio web (sin http/https): " domain_name
+# Variables de configuración
+domain_name="your_domain.com"
+db_name="your_database"
+db_user="your_db_user"
+db_password="your_db_password"
+php_timezone="America/New_York"  # Ajusta la zona horaria de PHP
+email="your_email@example.com"    # Tu dirección de correo electrónico
 
 # Verifica si el dominio ya existe en la configuración de Apache
 if [ -f "/etc/httpd/conf.d/$domain_name.conf" ]; then
@@ -34,9 +39,6 @@ sudo firewall-cmd --reload
 
 # Instala Certbot y el complemento de Apache para SSL
 sudo yum install certbot python3-certbot-apache -y
-
-# Solicita al usuario un correo electrónico para Certbot
-read -p "Ingrese su dirección de correo electrónico para Certbot: " email
 
 # Crea el directorio del dominio
 sudo mkdir -p $webroot
@@ -81,11 +83,6 @@ sudo systemctl reload httpd
 # Ejecuta Certbot para obtener y configurar el certificado SSL
 sudo certbot --apache -d $domain_name -m $email --agree-tos --no-eff-email -n
 
-# Solicita al usuario la información de la base de datos
-read -p "Ingrese el nombre de la base de datos: " db_name
-read -p "Ingrese el nombre de usuario de la base de datos: " db_user
-read -s -p "Ingrese la contraseña de la base de datos: " db_password
-
 # Instala MariaDB y asegura la instalación
 sudo yum install mariadb-server -y
 sudo systemctl start mariadb
@@ -100,7 +97,28 @@ sudo mysql -e "FLUSH PRIVILEGES;"
 # Instala PHP y módulos comunes
 sudo dnf install php php-common php-mysqlnd php-gd php-xml php-mbstring -y
 
+# Configura PHP con la zona horaria seleccionada y ajustes de rendimiento y seguridad
+sudo sed -i "s/;date.timezone =/date.timezone = $php_timezone/" /etc/php.ini
+sudo sed -i "s/expose_php = On/expose_php = Off/" /etc/php.ini
+sudo sed -i "s/memory_limit = 128M/memory_limit = 256M/" /etc/php.ini
+sudo sed -i "s/post_max_size = 8M/post_max_size = 32M/" /etc/php.ini
+sudo sed -i "s/upload_max_filesize = 2M/upload_max_filesize = 32M/" /etc/php.ini
+sudo sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php.ini
+sudo sed -i "s/max_execution_time = 30/max_execution_time = 60/" /etc/php.ini
+sudo sed -i "s/max_input_time = 60/max_input_time = 120/" /etc/php.ini
+sudo sed -i "s/;realpath_cache_size = 4096k/realpath_cache_size = 4096k/" /etc/php.ini
+sudo sed -i "s/;realpath_cache_ttl = 120/realpath_cache_ttl = 600/" /etc/php.ini
+sudo sed -i "s/disable_functions =/disable_functions = exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source/" /etc/php.ini
 
+# Configura PHP-FPM para un mejor rendimiento
+sudo sed -i "s/;pm.max_children = 5/pm.max_children = 20/" /etc/php-fpm.d/www.conf
+sudo sed -i "s/;pm.start_servers = 2/pm.start_servers = 4/" /etc/php-fpm.d/www.conf
+sudo sed -i "s/;pm.min_spare_servers = 1/pm.min_spare_servers = 2/" /etc/php-fpm.d/www.conf
+sudo sed -i "s/;pm.max_spare_servers = 3/pm.max_spare_servers = 6/" /etc/php-fpm.d/www.conf
+sudo sed -i "s/;pm.max_requests = 500/pm.max_requests = 1000/" /etc/php-fpm.d/www.conf
+
+# Reinicia PHP-FPM
+sudo systemctl restart php-fpm
 
 
 echo "El servidor LAMP con el VirtualHost para $domain_name y SSL habilitado se ha instalado correctamente. Puede acceder a su sitio web en https://$domain_name"
