@@ -1,1 +1,8 @@
-https://www.noip.com/client/linux/noip-duc-linux.tar.gz
+yum install make gcc tar -y
+cd /usr/local/src
+curl -O https://www.noip.com/client/linux/noip-duc-linux.tar.gz
+tar xzf noip-duc-linux.tar.gz
+cd no-ip-2.1.9
+make
+make install
+/usr/local/bin/noip2
