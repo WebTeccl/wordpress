@@ -120,6 +120,31 @@ sudo sed -i "s/;pm.max_requests = 500/pm.max_requests = 1000/" /etc/php-fpm.d/ww
 # Reinicia PHP-FPM
 sudo systemctl restart php-fpm
 
+# Instala y habilita mod_security
+sudo yum install mod_security -y
+sudo systemctl enable mod_security
+sudo systemctl restart httpd
+
+# Copia el archivo de configuración de ejemplo y ajusta las reglas
+sudo cp /etc/httpd/modsecurity.d/modsecurity.conf-recommended /etc/httpd/modsecurity.d/modsecurity.conf
+sudo sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/httpd/modsecurity.d/modsecurity.conf
+
+# Descarga las reglas OWASP ModSecurity Core Rule Set (CRS)
+sudo git clone https://github.com/SpiderLabs/owasp-modsecurity-crs.git /etc/httpd/modsecurity.d/owasp-crs
+sudo mv /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf.example /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf
+
+# Habilita las reglas OWASP
+sudo cp /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf.bak
+sudo sed -i 's/^SecDefaultAction/SecAction/' /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf
+sudo sed -i 's/^SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf
+sudo sed -i 's/SecDefaultAction "phase:1,log,auditlog,pass"/SecDefaultAction "phase:2,log,auditlog,deny,status:403"/' /etc/httpd/modsecurity.d/owasp-crs/crs-setup.conf
+
+# Incluye las reglas OWASP en el archivo de configuración principal de mod_security
+echo "IncludeOptional /etc/httpd/modsecurity.d/owasp-crs/*.conf" | sudo tee -a /etc/httpd/modsecurity.d/modsecurity.conf
+
+# Reinicia Apache para aplicar las configuraciones
+sudo systemctl restart httpd
+
 
 echo "El servidor LAMP con el VirtualHost para $domain_name y SSL habilitado se ha instalado correctamente. Puede acceder a su sitio web en https://$domain_name"
 exit 0
