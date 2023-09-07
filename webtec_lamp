@@ -1,27 +1,85 @@
 #!/bin/bash
-#update system
-dnf update
-#install apache
-dnf install httpd httpd-tools -y
-systemctl enable httpd
-systemctl start httpd
-#update firewall
-firewall-cmd --permanent --zone=public --add-service=http
-firewall-cmd --permanent --zone=public --add-service=https
-firewall-cmd --reload
-#install mariadb
-dnf install mariadb-server mariadb -y
-systemctl start mariadb
-systemctl enable mariadb
-systemctl status mariadb
-mysql_secure_installation
-# Install PHP 7 on CentOS 8
-dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-#dnf install dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
-#dnf module list php
-dnf install php php-opcache php-gd php-curl php-mysqlnd -y
-systemctl start php-fpm
-systemctl enable php-fpm
-systemctl status php-fpm
-setsebool -P httpd_execmem 1
-systemctl restart httpd
+
+# Solicita al usuario el nombre de dominio
+read -p "Ingrese el nombre de dominio para su sitio web (sin http/https): " domain_name
+
+# Verifica si el dominio ya existe en la configuración de Apache
+if [ -f "/etc/httpd/conf.d/$domain_name.conf" ]; then
+  echo "El dominio $domain_name ya existe en la configuración de Apache. Saliendo."
+  exit 1
+fi
+
+# Directorio base para el sitio web del dominio
+webroot="/var/www/$domain_name"
+
+# Verifica si el directorio del dominio ya existe
+if [ -d "$webroot" ]; then
+  echo "El directorio $webroot ya existe. Saliendo."
+  exit 1
+fi
+
+# Actualiza el sistema
+sudo yum update -y
+
+# Instala Apache
+sudo yum install httpd -y
+
+# Inicia Apache y habilita su inicio en el arranque
+sudo systemctl start httpd
+sudo systemctl enable httpd
+
+# Abre el puerto 80 en el firewall para HTTP
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+
+# Instala Certbot y el complemento de Apache para SSL
+sudo yum install certbot python3-certbot-apache -y
+
+# Solicita al usuario un correo electrónico para Certbot
+read -p "Ingrese su dirección de correo electrónico para Certbot: " email
+
+# Crea el directorio del dominio
+sudo mkdir -p $webroot
+
+# Crea un archivo de configuración de VirtualHost para Apache
+sudo tee /etc/httpd/conf.d/$domain_name.conf > /dev/null <<EOF
+<VirtualHost *:80>
+    ServerAdmin webmaster@$domain_name
+    ServerName $domain_name
+    DocumentRoot $webroot
+
+   # Mejoras de seguridad en la configuración de Apache
+    ServerTokens Prod
+    ServerSignature Off
+    TraceEnable Off
+    FileETag None
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+
+ # Habilitación de HTTP/2
+    Protocols h2 http/1.1
+
+ # Ajustes de rendimiento
+    KeepAlive On
+    MaxKeepAliveRequests 100
+    KeepAliveTimeout 5
+    Timeout 60
+
+
+    ErrorLog /var/log/httpd/$domain_name-error.log
+    CustomLog /var/log/httpd/$domain_name-access.log combined
+</VirtualHost>
+EOF
+
+# Configura permisos para el directorio del dominio
+sudo chown -R apache:apache $webroot
+sudo chmod -R 755 $webroot
+
+# Recarga la configuración de Apache
+sudo systemctl reload httpd
+
+# Ejecuta Certbot para obtener y configurar el certificado SSL
+sudo certbot --apache -d $domain_name -m $email --agree-tos --no-eff-email -n
+
+echo "El servidor LAMP con el VirtualHost para $domain_name y SSL habilitado se ha instalado correctamente. Puede acceder a su sitio web en https://$domain_name"
+exit 0
