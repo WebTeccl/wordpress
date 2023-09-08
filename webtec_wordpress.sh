@@ -80,6 +80,13 @@ sudo sed -i "s/database_name_here/$db_name/g" $webroot/wp-config.php
 sudo sed -i "s/username_here/$db_user/g" $webroot/wp-config.php
 sudo sed -i "s/password_here/$db_password/g" $webroot/wp-config.php
 
+# Genera las "Authentication Unique Keys and Salts"
+auth_keys=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
+
+# Agrega las claves y sal a wp-config.php
+sudo sed -i "/#@-/a $auth_keys" $webroot/wp-config.php
+
+
 # Establece permisos en los archivos de WordPress
 sudo chown -R apache:apache $webroot
 sudo chmod -R 755 $webroot
