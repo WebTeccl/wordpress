@@ -1,6 +1,6 @@
 #!/bin/bash
 #Instala librerias recomendadas para wordpress
-yum install php-zip php-intl -y
+yum install php-zip php-intl  php-imagick -y
 
 # Verifica si el usuario es root
 if [[ $EUID -ne 0 ]]; then
